@@ -4,6 +4,8 @@
 
 #include "cobalt-host.h"
 
+#include <errno.h>
+
 #include <gio/gdesktopappinfo.h>
 
 #define FLATPAK_INFO_PATH "/.flatpak-info"
