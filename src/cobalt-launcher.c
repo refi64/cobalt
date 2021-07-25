@@ -4,6 +4,8 @@
 
 #include "cobalt-launcher.h"
 
+#include <errno.h>
+
 #define FLAG_PREFIX "--"
 
 #define ENABLE_FEATURES_FLAG_PREFIX "--enable-features="
@@ -194,6 +196,9 @@ static char *format_features_as_flag(CobaltLauncher *launcher,
     return g_strdup_printf("--disable-features=%s", arg_value);
   case COBALT_LAUNCHER_FEATURE_ENABLED:
     return g_strdup_printf("--enable-features=%s", arg_value);
+  default:
+    g_warn_if_reached();
+    return NULL;
   }
 }
 
