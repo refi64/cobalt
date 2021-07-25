@@ -1,0 +1,6 @@
+AlignEscapedNewlines: Left
+ColumnLimit: 90
+FixNamespaceComments: true
+IncludeBlocks: Regroup
+PointerAlignment: Right
+SpacesBeforeTrailingComments: 2

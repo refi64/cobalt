@@ -1,0 +1,5 @@
+.cache/
+_build/
+
+.gdb_history
+compile_commands.json
