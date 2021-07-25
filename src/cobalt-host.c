@@ -5,7 +5,6 @@
 #include "cobalt-host.h"
 
 #include <errno.h>
-
 #include <gio/gdesktopappinfo.h>
 
 #define FLATPAK_INFO_PATH "/.flatpak-info"
@@ -164,9 +163,8 @@ gboolean cobalt_host_get_expose_pids_available(CobaltHost *host, gboolean *avail
                                                GError **error) {
   if (!(host->flags & FLAG_EXPOSE_PIDS_SET)) {
     g_autoptr(GDBusProxy) proxy = g_dbus_proxy_new_for_bus_sync(
-        G_BUS_TYPE_SESSION,
-        G_DBUS_PROXY_FLAGS_DO_NOT_CONNECT_SIGNALS | G_DBUS_PROXY_FLAGS_DO_NOT_AUTO_START,
-        NULL, FLATPAK_PORTAL_NAME, FLATPAK_PORTAL_OBJECT, FLATPAK_PORTAL_INTERFACE, NULL,
+        G_BUS_TYPE_SESSION, G_DBUS_PROXY_FLAGS_DO_NOT_CONNECT_SIGNALS, NULL,
+        FLATPAK_PORTAL_NAME, FLATPAK_PORTAL_OBJECT, FLATPAK_PORTAL_INTERFACE, NULL,
         error);
     if (proxy == NULL) {
       g_prefix_error(error, "Failed to get portal proxy: ");

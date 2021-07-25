@@ -342,11 +342,9 @@ int main(int argc, char **argv) {
   if (config->application.expose_pids != COBALT_CONFIG_EXPOSE_PIDS_OPTIONAL) {
     gboolean expose_pids_available = FALSE;
     if (!cobalt_host_get_expose_pids_available(host, &expose_pids_available, &error)) {
-      g_printerr("Failed to get expose-pids state: %s\n", error->message);
-      return 1;
-    }
-
-    if (!expose_pids_available) {
+      g_warning("Failed to get expose-pids state: %s", error->message);
+      // Just keep going, it's better than failing hard here.
+    } else if (!expose_pids_available) {
       show_expose_pids_alert(config);
       if (config->application.expose_pids == COBALT_CONFIG_EXPOSE_PIDS_REQUIRED) {
         return 1;
