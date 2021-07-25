@@ -109,6 +109,16 @@ CobaltConfig *cobalt_config_load(GError **error) {
   config->application.migrate_flags_file = g_key_file_get_string(
       key_file, CONFIG_APPLICATION, CONFIG_APPLICATION_MIGRATE_FLAGS_FILE, NULL);
 
+  const char *expose_pids_string = g_key_file_get_string(
+      key_file, CONFIG_APPLICATION, CONFIG_APPLICATION_EXPOSE_PIDS, NULL);
+  if (expose_pids_string != NULL) {
+    config->application.expose_pids = parse_expose_pids(expose_pids_string, &local_error);
+    if (local_error) {
+      g_propagate_error(error, g_steal_pointer(&local_error));
+      return NULL;
+    }
+  }
+
   if (!read_boolean(key_file, CONFIG_ZYPAK, CONFIG_ZYPAK_ENABLED, &config->zypak.enabled,
                     &config->zypak.enabled_was_set_by_user, error)) {
     return FALSE;
@@ -134,16 +144,6 @@ CobaltConfig *cobalt_config_load(GError **error) {
       g_key_file_get_string(key_file, CONFIG_ZYPAK, CONFIG_ZYPAK_WIDEVINE_PATH, NULL);
   if (config->zypak.widevine_path == NULL) {
     config->zypak.widevine_path = g_strdup(CONFIG_ZYPAK_WIDEVINE_PATH_DEFAULT);
-  }
-
-  const char *expose_pids_string =
-      g_key_file_get_string(key_file, CONFIG_ZYPAK, CONFIG_APPLICATION_EXPOSE_PIDS, NULL);
-  if (expose_pids_string != NULL) {
-    config->application.expose_pids = parse_expose_pids(expose_pids_string, &local_error);
-    if (local_error) {
-      g_propagate_error(error, g_steal_pointer(&local_error));
-      return NULL;
-    }
   }
 
   if (!read_boolean(key_file, CONFIG_FLEXTOP, CONFIG_FLEXTOP_ENABLED,
