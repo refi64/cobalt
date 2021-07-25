@@ -108,7 +108,7 @@ gboolean cobalt_launcher_read_flags_file(CobaltLauncher *launcher, GFile *file,
 
     g_strstrip(line);
 
-    if (g_str_has_prefix(line, "#")) {
+    if (*line == '\0' || g_str_has_prefix(line, "#")) {
       continue;
     }
 
