@@ -22,6 +22,9 @@
 #define CONFIG_ZYPAK_EXPOSE_WIDEVINE "ExposeWidevine"
 #define CONFIG_ZYPAK_WIDEVINE_PATH "WidevinePath"
 
+#define CONFIG_FLEXTOP "Flextop"
+#define CONFIG_FLEXTOP_ENABLED "Enabled"
+
 #define CONFIG_DEFAULT_FEATURES "DefaultFeatures"
 #define CONFIG_DEFAULT_FEATURES_ENABLED "Enabled"
 #define CONFIG_DEFAULT_FEATURES_DISABLED "Disabled"
@@ -141,6 +144,12 @@ CobaltConfig *cobalt_config_load(GError **error) {
       g_propagate_error(error, g_steal_pointer(&local_error));
       return NULL;
     }
+  }
+
+  if (!read_boolean(key_file, CONFIG_FLEXTOP, CONFIG_FLEXTOP_ENABLED,
+                    &config->flextop.enabled, &config->flextop.enabled_was_set_by_user,
+                    error)) {
+    return FALSE;
   }
 
   config->default_features.enabled = g_key_file_get_string_list(

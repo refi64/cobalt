@@ -46,6 +46,12 @@ struct CobaltConfig {
   } zypak;
 
   struct {
+    // Must be filled with defaults externally if not set.
+    gboolean enabled;
+    gboolean enabled_was_set_by_user;
+  } flextop;
+
+  struct {
     GStrv enabled;
     GStrv disabled;
   } default_features;

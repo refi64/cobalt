@@ -11,6 +11,7 @@
 #define FLATPAK_INFO_APPLICATION "Application"
 #define FLATPAK_INFO_APPLICATION_NAME "name"
 
+#define FLEXTOP_INIT_PATH "/app/bin/flextop-init"
 #define ZYPAK_WRAPPER_PATH "/app/bin/zypak-wrapper.sh"
 
 #define FLATPAK_PORTAL_NAME "org.freedesktop.portal.Flatpak"
@@ -27,10 +28,12 @@ enum FlatpakPortalSupports {
 };
 
 enum {
-  FLAG_ZYPAK_SET = 1 << 0,
-  FLAG_ZYPAK_AVAILABLE = 1 << 1,
-  FLAG_EXPOSE_PIDS_SET = 1 << 2,
-  FLAG_EXPOSE_PIDS_AVAILABLE = 1 << 3,
+  FLAG_FLEXTOP_SET = 1 << 0,
+  FLAG_FLEXTOP_AVAILABLE = 1 << 1,
+  FLAG_ZYPAK_SET = 1 << 2,
+  FLAG_ZYPAK_AVAILABLE = 1 << 3,
+  FLAG_EXPOSE_PIDS_SET = 1 << 4,
+  FLAG_EXPOSE_PIDS_AVAILABLE = 1 << 5,
 };
 
 struct CobaltHost {
@@ -81,15 +84,46 @@ const char *cobalt_host_get_app_exec(CobaltHost *host, GError **error) {
   return host->exec;
 }
 
+static gboolean check_for_binary(const char *path, gboolean *available, GError **error) {
+  gboolean local_available = access(path, F_OK | X_OK) != -1;
+  if (!local_available && errno != ENOENT && errno != EPERM) {
+    int saved_errno = errno;
+    g_set_error(error, G_IO_ERROR, g_io_error_from_errno(saved_errno),
+                "Failed to check " ZYPAK_WRAPPER_PATH " existence: %s",
+                g_strerror(saved_errno));
+    return FALSE;
+  }
+
+  *available = local_available;
+  return TRUE;
+}
+
+gboolean cobalt_host_get_flextop_available(CobaltHost *host, gboolean *available,
+                                           GError **error) {
+  if (!(host->flags & FLAG_FLEXTOP_SET)) {
+    gboolean local_available = FALSE;
+    if (!check_for_binary(FLEXTOP_INIT_PATH, &local_available, error)) {
+      return FALSE;
+    }
+
+    host->flags |= FLAG_FLEXTOP_SET;
+    if (local_available) {
+      g_debug("Flextop is available");
+      host->flags |= FLAG_FLEXTOP_AVAILABLE;
+    } else {
+      g_debug("Flextop is not available (" FLEXTOP_INIT_PATH " not found)");
+    }
+  }
+
+  *available = host->flags & FLAG_FLEXTOP_AVAILABLE;
+  return TRUE;
+}
+
 gboolean cobalt_host_get_zypak_available(CobaltHost *host, gboolean *available,
                                          GError **error) {
   if (!(host->flags & FLAG_ZYPAK_SET)) {
-    gboolean local_available = access(ZYPAK_WRAPPER_PATH, F_OK | X_OK) != -1;
-    if (!local_available && errno != ENOENT && errno != EPERM) {
-      int saved_errno = errno;
-      g_set_error(error, G_IO_ERROR, g_io_error_from_errno(saved_errno),
-                  "Failed to check " ZYPAK_WRAPPER_PATH " existence: %s",
-                  g_strerror(saved_errno));
+    gboolean local_available = FALSE;
+    if (!check_for_binary(ZYPAK_WRAPPER_PATH, &local_available, error)) {
       return FALSE;
     }
 

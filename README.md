@@ -126,6 +126,11 @@ ExposeWidevine=true
 # Always defaults to WidevineCdm.
 WidevinePath=WidevineCdm
 
+[Flextop]
+# If true, 'flextop-init' will be called before starting the Flatpak. If omitted,
+# it will be set to 'true' if flextop-init is present in the Flatpak.
+Enabled=true
+
 # This lets you enable or disable some Chromium features by default. Each value
 # is a semicolon-separated list of features to enable/disable.
 [DefaultFeatures]

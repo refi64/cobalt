@@ -168,6 +168,13 @@ static gboolean fill_defaults(CobaltConfig *config, CobaltHost *host, GError **e
     }
   }
 
+  if (!config->flextop.enabled_was_set_by_user) {
+    if (!cobalt_host_get_flextop_available(host, &config->flextop.enabled, error)) {
+      g_prefix_error(error, "Failed to get Flextop status: ");
+      return FALSE;
+    }
+  }
+
   if (config->zypak.enabled && !config->zypak.sandbox_filename) {
     config->zypak.sandbox_filename = infer_sandbox_filename(
         config->application.name, config->application.entry_point, error);
@@ -240,6 +247,16 @@ static void show_expose_pids_alert(CobaltConfig *config) {
     if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(no_remind))) {
       touch_stamp_file(stamp_file);
     }
+  }
+}
+
+static void flextop_init() {
+  g_autoptr(GError) error = NULL;
+
+  g_autoptr(GSubprocess) process =
+      g_subprocess_new(G_SUBPROCESS_FLAGS_NONE, &error, "flextop-init", NULL);
+  if (process == NULL || !g_subprocess_wait_check(process, NULL, &error)) {
+    g_warning("Failed to run flextop-init: %s", error->message);
   }
 }
 
@@ -335,6 +352,10 @@ int main(int argc, char **argv) {
         return 1;
       }
     }
+  }
+
+  if (config->flextop.enabled) {
+    flextop_init();
   }
 
   g_autoptr(CobaltLauncher) launcher = setup_launcher(config, host);
