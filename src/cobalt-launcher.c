@@ -112,23 +112,29 @@ gboolean cobalt_launcher_read_flags_file(CobaltLauncher *launcher, GFile *file,
       continue;
     }
 
-    if (g_str_has_prefix(line, ENABLE_FEATURES_FLAGFILE_PREFIX) ||
-        g_str_has_prefix(line, DISABLE_FEATURES_FLAGFILE_PREFIX)) {
-      const char *feature = strchr(line, '=') + 1;
-      if (*feature == '\0') {
-        g_warning("Line in '%s' has an empty feature: %s", g_file_peek_path(file), line);
-      }
+    {
+      char* token;
+      char* rest = line;
+      while ((token = strtok_r(rest, " ", &rest))) {
+        if (g_str_has_prefix(token, ENABLE_FEATURES_FLAGFILE_PREFIX) ||
+            g_str_has_prefix(token, DISABLE_FEATURES_FLAGFILE_PREFIX)) {
+          const char *feature = strchr(token, '=') + 1;
+          if (*feature == '\0') {
+            g_warning("Argument in '%s' has an empty feature: %s", g_file_peek_path(file), token);
+          }
 
-      cobalt_launcher_set_feature(launcher, feature,
-                                  g_str_has_prefix(line, ENABLE_FEATURES_FLAGFILE_PREFIX)
-                                      ? COBALT_LAUNCHER_FEATURE_ENABLED
-                                      : COBALT_LAUNCHER_FEATURE_DISABLED);
-    } else if (!(g_str_has_prefix(line, FLAG_PREFIX) &&
-                 line[strlen(FLAG_PREFIX)] != '\0')) {
-      g_warning("Line in '%s' is not a flag (must start with '--'): %s",
-                g_file_peek_path(file), line);
-    } else {
-      cobalt_launcher_add_arg(launcher, line);
+          cobalt_launcher_set_feature(launcher, feature,
+                                      g_str_has_prefix(token, ENABLE_FEATURES_FLAGFILE_PREFIX)
+                                          ? COBALT_LAUNCHER_FEATURE_ENABLED
+                                          : COBALT_LAUNCHER_FEATURE_DISABLED);
+        } else if (!(g_str_has_prefix(token, FLAG_PREFIX) &&
+                    token[strlen(FLAG_PREFIX)] != '\0')) {
+          g_warning("Argument in '%s' is not a flag (must start with '--'): %s",
+                    g_file_peek_path(file), token);
+        } else {
+          cobalt_launcher_add_arg(launcher, token);
+        }
+      }
     }
   }
 

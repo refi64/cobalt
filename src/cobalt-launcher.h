@@ -6,6 +6,7 @@
 
 #include "cobalt-host.h"
 
+#include <strings.h>
 #include <gio/gio.h>
 #include <glib.h>
 
