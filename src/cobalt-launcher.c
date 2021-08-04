@@ -112,23 +112,38 @@ gboolean cobalt_launcher_read_flags_file(CobaltLauncher *launcher, GFile *file,
       continue;
     }
 
-    if (g_str_has_prefix(line, ENABLE_FEATURES_FLAGFILE_PREFIX) ||
-        g_str_has_prefix(line, DISABLE_FEATURES_FLAGFILE_PREFIX)) {
-      const char *feature = strchr(line, '=') + 1;
-      if (*feature == '\0') {
-        g_warning("Line in '%s' has an empty feature: %s", g_file_peek_path(file), line);
+    {
+      gint tokenc = 0;
+      g_auto(GStrv) tokenv = NULL;
+
+      if (!g_shell_parse_argv(line, &tokenc, &tokenv, NULL)) {
+        g_warning("Parsing line '%s' in '%s' as a shell argument failed", line,
+                  g_file_peek_path(file));
+        continue;
       }
 
-      cobalt_launcher_set_feature(launcher, feature,
-                                  g_str_has_prefix(line, ENABLE_FEATURES_FLAGFILE_PREFIX)
-                                      ? COBALT_LAUNCHER_FEATURE_ENABLED
-                                      : COBALT_LAUNCHER_FEATURE_DISABLED);
-    } else if (!(g_str_has_prefix(line, FLAG_PREFIX) &&
-                 line[strlen(FLAG_PREFIX)] != '\0')) {
-      g_warning("Line in '%s' is not a flag (must start with '--'): %s",
-                g_file_peek_path(file), line);
-    } else {
-      cobalt_launcher_add_arg(launcher, line);
+      for (int i = 0; i < tokenc; i++) {
+        if (g_str_has_prefix(tokenv[i], ENABLE_FEATURES_FLAGFILE_PREFIX) ||
+            g_str_has_prefix(tokenv[i], DISABLE_FEATURES_FLAGFILE_PREFIX)) {
+          const char *feature = strchr(tokenv[i], '=') + 1;
+          if (*feature == '\0') {
+            g_warning("Argument in '%s' has an empty feature: %s", g_file_peek_path(file),
+                      tokenv[i]);
+          }
+
+          cobalt_launcher_set_feature(
+              launcher, feature,
+              g_str_has_prefix(tokenv[i], ENABLE_FEATURES_FLAGFILE_PREFIX)
+                  ? COBALT_LAUNCHER_FEATURE_ENABLED
+                  : COBALT_LAUNCHER_FEATURE_DISABLED);
+        } else if (!(g_str_has_prefix(tokenv[i], FLAG_PREFIX) &&
+                     tokenv[i][strlen(FLAG_PREFIX)] != '\0')) {
+          g_warning("Argument in '%s' is not a flag (must start with '--'): %s",
+                    g_file_peek_path(file), tokenv[i]);
+        } else {
+          cobalt_launcher_add_arg(launcher, tokenv[i]);
+        }
+      }
     }
   }
 
