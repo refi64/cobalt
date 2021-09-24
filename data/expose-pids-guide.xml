@@ -21,9 +21,9 @@
   <code>
     <![CDATA[
 
-    dpkg-statoverride --update --add root root 0755 /usr/bin/bwrap echo
-    kernel.unprivileged_userns_clone=1 > /etc/sysctl.d/50-bubblewrap.conf sudo
-    sysctl -w kernel.unprivileged_userns_clone=1
+    sudo dpkg-statoverride --update --add root root 0755 /usr/bin/bwrap
+    echo kernel.unprivileged_userns_clone=1 | sudo tee /etc/sysctl.d/50-bubblewrap.conf
+    sudo sysctl -w kernel.unprivileged_userns_clone=1
 
     ]]>
   </code>
@@ -43,7 +43,7 @@
   <code>
     <![CDATA[
 
-    echo kernel.unprivileged_userns_clone=1 > /etc/sysctl.d/50-bubblewrap.conf
+    echo kernel.unprivileged_userns_clone=1 | sudo tee /etc/sysctl.d/50-bubblewrap.conf
     sudo sysctl -w kernel.unprivileged_userns_clone=1
 
     ]]>
