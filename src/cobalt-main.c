@@ -322,7 +322,7 @@ static CobaltLauncher *setup_launcher(CobaltConfig *config, CobaltHost *host) {
 }
 
 int main(int argc, char **argv) {
-  gtk_init(0, NULL);
+  gboolean is_gtk_available = gtk_init_check(0, NULL);
 
   g_autoptr(GError) error = NULL;
 
@@ -345,7 +345,15 @@ int main(int argc, char **argv) {
       g_warning("Failed to get expose-pids state: %s", error->message);
       // Just keep going, it's better than failing hard here.
     } else if (!expose_pids_available) {
-      show_expose_pids_alert(config);
+      if (is_gtk_available) {
+        show_expose_pids_alert(config);
+      } else {
+        g_warning("'expose-pids' support is %s but unavailable",
+                  config->application.expose_pids == COBALT_CONFIG_EXPOSE_PIDS_REQUIRED
+                      ? "required"
+                      : "recommended");
+      }
+
       if (config->application.expose_pids == COBALT_CONFIG_EXPOSE_PIDS_REQUIRED) {
         return 1;
       }
