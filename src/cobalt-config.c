@@ -155,7 +155,7 @@ CobaltConfig *cobalt_config_load(GError **error) {
   config->default_features.enabled = g_key_file_get_string_list(
       key_file, CONFIG_DEFAULT_FEATURES, CONFIG_DEFAULT_FEATURES_ENABLED, NULL, NULL);
   config->default_features.disabled = g_key_file_get_string_list(
-      key_file, CONFIG_DEFAULT_FEATURES, CONFIG_DEFAULT_FEATURES_ENABLED, NULL, NULL);
+      key_file, CONFIG_DEFAULT_FEATURES, CONFIG_DEFAULT_FEATURES_DISABLED, NULL, NULL);
 
   return g_steal_pointer(&config);
 }
