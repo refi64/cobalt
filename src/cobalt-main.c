@@ -251,11 +251,16 @@ static void show_expose_pids_alert(CobaltConfig *config) {
   }
 }
 
-static void flextop_init() {
+static void flextop_init(CobaltConfig *config) {
   g_autoptr(GError) error = NULL;
 
+  g_autoptr(GSubprocessLauncher) launcher =
+      g_subprocess_launcher_new(G_SUBPROCESS_FLAGS_NONE);
+  g_subprocess_launcher_setenv(launcher, "CHROME_WRAPPER",
+                               config->application.wrapper_script, TRUE);
+
   g_autoptr(GSubprocess) process =
-      g_subprocess_new(G_SUBPROCESS_FLAGS_NONE, &error, "flextop-init", NULL);
+      g_subprocess_launcher_spawn(launcher, &error, "flextop-init", NULL);
   if (process == NULL || !g_subprocess_wait_check(process, NULL, &error)) {
     g_warning("Failed to run flextop-init: %s", error->message);
   }
@@ -362,7 +367,7 @@ int main(int argc, char **argv) {
   }
 
   if (config->flextop.enabled) {
-    flextop_init();
+    flextop_init(config);
   }
 
   g_autoptr(CobaltLauncher) launcher = setup_launcher(config, host);
