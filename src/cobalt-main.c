@@ -26,6 +26,7 @@
 static char *DEFAULT_ENABLED_FEATURES[] = {NULL};
 
 static char *DEFAULT_DISABLED_FEATURES[] = {
+    "DesktopPWAsRunOnOsLogin",
     "WebAssemblyTrapHandler",
     NULL,
 };
