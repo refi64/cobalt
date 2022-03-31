@@ -269,6 +269,8 @@ static gboolean launcher_update_environment(CobaltLauncher *launcher, GError **e
     launcher_setenv("ZYPAK_EXPOSE_WIDEVINE_PATH", launcher->expose_widevine_path);
   }
 
+  launcher_setenv("ZYPAK_SPAWN_LATEST_ON_REEXEC", "1");
+
   return TRUE;
 }
 
