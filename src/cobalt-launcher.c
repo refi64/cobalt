@@ -260,6 +260,11 @@ static gboolean launcher_update_environment(CobaltLauncher *launcher, GError **e
       g_build_filename(g_get_user_runtime_dir(), "app", app_id, NULL);
   launcher_setenv("TMPDIR", new_tmpdir);
 
+  launcher_setenv(
+      "XCURSOR_PATH",
+      "~/.icons:/app/share/icons:/usr/share/icons:/usr/share/pixmaps"
+      ":/usr/share/runtime/share/icons:/run/host/user-share/icons:/run/host/share/icons");
+
   launcher_setenv("CHROME_WRAPPER", launcher->wrapper_script);
 
   if (launcher->sandbox_filename != NULL) {
