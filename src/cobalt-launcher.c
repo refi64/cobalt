@@ -5,6 +5,7 @@
 #include "cobalt-launcher.h"
 
 #include <errno.h>
+#include <sys/utsname.h>
 
 #define FLAG_PREFIX "--"
 
@@ -259,6 +260,18 @@ static gboolean launcher_update_environment(CobaltLauncher *launcher, GError **e
   g_autofree char *new_tmpdir =
       g_build_filename(g_get_user_runtime_dir(), "app", app_id, NULL);
   launcher_setenv("TMPDIR", new_tmpdir);
+
+  struct utsname utsname;
+  if (uname(&utsname) == -1) {
+    int saved_errno = errno;
+    g_set_error(error, G_IO_ERROR, g_io_error_from_errno(saved_errno),
+                "Failed to get utsname: %s", g_strerror(saved_errno));
+    return FALSE;
+  }
+
+  g_autofree char *libgl_drivers_path =
+      g_strdup_printf("/usr/lib/%s-linux-gnu/GL/lib/dri", utsname.machine);
+  launcher_setenv("LIBGL_DRIVERS_PATH", libgl_drivers_path);
 
   launcher_setenv(
       "XCURSOR_PATH",
