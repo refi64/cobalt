@@ -273,6 +273,10 @@ static gboolean launcher_update_environment(CobaltLauncher *launcher, GError **e
       g_strdup_printf("/usr/lib/%s-linux-gnu/GL/lib/dri", utsname.machine);
   launcher_setenv("LIBGL_DRIVERS_PATH", libgl_drivers_path);
 
+  g_autofree char *vk_driver_files =
+      g_strdup_printf("/usr/lib/%s-linux-gnu/GL/vulkan/icd.d", utsname.machine);
+  launcher_setenv("VK_DRIVER_FILES", vk_driver_files);
+
   launcher_setenv(
       "XCURSOR_PATH",
       "~/.icons:/app/share/icons:/usr/share/icons:/usr/share/pixmaps"
