@@ -12,6 +12,9 @@
 #define FLATPAK_INFO_APPLICATION "Application"
 #define FLATPAK_INFO_APPLICATION_NAME "name"
 
+#define FLATPAK_INFO_INSTANCE "Instance"
+#define FLATPAK_INFO_INSTANCE_FP_VERSION "flatpak-version"
+
 #define FLEXTOP_INIT_PATH "/app/bin/flextop-init"
 #define ZYPAK_WRAPPER_PATH "/app/bin/zypak-wrapper.sh"
 
@@ -35,11 +38,20 @@ enum {
   FLAG_ZYPAK_AVAILABLE = 1 << 3,
   FLAG_EXPOSE_PIDS_SET = 1 << 4,
   FLAG_EXPOSE_PIDS_AVAILABLE = 1 << 5,
+  FLAG_SHARED_SLASH_TMP_SET = 1 << 6,
+  FLAG_SHARED_SLASH_TMP_AVAILABLE = 1 << 7,
+};
+
+struct SemVer {
+  guint major;
+  guint minor;
+  guint patch;
 };
 
 struct CobaltHost {
   char *app_id;
   char *exec;
+  SemVer *fp_version;
   int flags;
 };
 
@@ -83,6 +95,51 @@ const char *cobalt_host_get_app_exec(CobaltHost *host, GError **error) {
   }
 
   return host->exec;
+}
+
+static SemVer *cobalt_host_get_fp_version(CobaltHost *host, GError **error) {
+  if (!host->fp_version) {
+    g_autoptr(GKeyFile) key_file = g_key_file_new();
+    if (!g_key_file_load_from_file(key_file, FLATPAK_INFO_PATH, G_KEY_FILE_NONE, error)) {
+      g_prefix_error(error, "Loading Flatpak info: ");
+      return NULL;
+    }
+
+    g_autofree gchar *version_str = g_key_file_get_string(
+        key_file, FLATPAK_INFO_INSTANCE, FLATPAK_INFO_INSTANCE_FP_VERSION, error);
+    if (version_str == NULL) {
+      g_prefix_error(error, "Getting Flatpak version: ");
+      return NULL;
+    }
+
+    host->fp_version = g_new0(SemVer, 1);
+    g_autoptr(GRegex) regex = g_regex_new("^(\\d+)\\.(\\d+)\\.(\\d+)", 0, 0, error);
+    if (regex == NULL) {
+      g_prefix_error(error, "Compiling regex: ");
+      return NULL;
+    }
+
+    g_autoptr(GMatchInfo) match_info = NULL;
+    if (!g_regex_match(regex, version_str, 0, &match_info)) {
+      g_set_error(error, G_KEY_FILE_ERROR, G_KEY_FILE_ERROR_INVALID_VALUE,
+                  "Failed to match Flatpak version '%s'", version_str);
+      return NULL;
+    }
+
+    g_assert(g_match_info_matches(match_info));
+
+    host->fp_version->major =
+        g_ascii_strtoull(g_match_info_fetch(match_info, 1), NULL, 10);
+    host->fp_version->minor =
+        g_ascii_strtoull(g_match_info_fetch(match_info, 2), NULL, 10);
+    host->fp_version->patch =
+        g_ascii_strtoull(g_match_info_fetch(match_info, 3), NULL, 10);
+
+    g_debug("Flatpak version: %u.%u.%u", host->fp_version->major, host->fp_version->minor,
+            host->fp_version->patch);
+  }
+
+  return host->fp_version;
 }
 
 static gboolean check_for_binary(const char *path, gboolean *available, GError **error) {
@@ -208,8 +265,32 @@ gboolean cobalt_host_get_expose_pids_available(CobaltHost *host, gboolean *avail
   return TRUE;
 }
 
+gboolean cobalt_host_get_slash_tmp_shared_available(CobaltHost *host, gboolean *available,
+                                                    GError **error) {
+  if (!(host->flags & FLAG_SHARED_SLASH_TMP_SET)) {
+    const SemVer *fp_version = cobalt_host_get_fp_version(host, error);
+    if (fp_version == NULL) {
+      return FALSE;
+    }
+
+    if (fp_version->major > 1 || (fp_version->major == 1 && fp_version->minor > 11) ||
+        (fp_version->major == 1 && fp_version->minor == 11 && fp_version->patch >= 1)) {
+      g_debug("Flatpak version is >= 1.11.1, shared /tmp is available");
+      host->flags |= FLAG_SHARED_SLASH_TMP_AVAILABLE;
+    } else {
+      g_debug("Flatpak version is < 1.11.1, shared /tmp is not available");
+    }
+
+    host->flags |= FLAG_SHARED_SLASH_TMP_SET;
+  }
+
+  *available = host->flags & FLAG_SHARED_SLASH_TMP_AVAILABLE;
+  return TRUE;
+}
+
 void cobalt_host_free(CobaltHost *host) {
   g_clear_pointer(&host->app_id, g_free);
   g_clear_pointer(&host->exec, g_free);
+  g_clear_pointer(&host->fp_version, g_free);
   g_free(host);
 }
