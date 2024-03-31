@@ -6,6 +6,7 @@
 
 #include <glib.h>
 
+typedef struct SemVer SemVer;
 typedef struct CobaltHost CobaltHost;
 
 CobaltHost *cobalt_host_new();
@@ -21,5 +22,7 @@ gboolean cobalt_host_get_zypak_available(CobaltHost *host, gboolean *available,
                                          GError **error);
 gboolean cobalt_host_get_expose_pids_available(CobaltHost *host, gboolean *available,
                                                GError **error);
+gboolean cobalt_host_get_slash_tmp_shared_available(CobaltHost *host, gboolean *available,
+                                                    GError **error);
 
 G_DEFINE_AUTOPTR_CLEANUP_FUNC(CobaltHost, cobalt_host_free)

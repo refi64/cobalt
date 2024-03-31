@@ -4,6 +4,8 @@
 
 #include "cobalt-launcher.h"
 
+#include "cobalt-host.h"
+
 #include <errno.h>
 #include <sys/utsname.h>
 
@@ -257,9 +259,16 @@ static gboolean launcher_update_environment(CobaltLauncher *launcher, GError **e
     return FALSE;
   }
 
-  g_autofree char *new_tmpdir =
-      g_build_filename(g_get_user_runtime_dir(), "app", app_id, NULL);
-  launcher_setenv("TMPDIR", new_tmpdir);
+  gboolean shared_slash_tmp_available = FALSE;
+  if (!cobalt_host_get_slash_tmp_shared_available(launcher->host,
+                                                  &shared_slash_tmp_available, error)) {
+    g_prefix_error(error, "Failed to get shared /tmp availability: ");
+    return FALSE;
+  } else if (shared_slash_tmp_available) {
+    launcher_setenv("TMPDIR", "/tmp");
+  } else {
+    launcher_setenv("TMPDIR", "/var/tmp");
+  }
 
   struct utsname utsname;
   if (uname(&utsname) == -1) {
