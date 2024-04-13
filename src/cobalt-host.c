@@ -42,11 +42,11 @@ enum {
   FLAG_SHARED_SLASH_TMP_AVAILABLE = 1 << 7,
 };
 
-struct SemVer {
+typedef struct SemVer {
   guint major;
   guint minor;
   guint patch;
-};
+} SemVer;
 
 struct CobaltHost {
   char *app_id;

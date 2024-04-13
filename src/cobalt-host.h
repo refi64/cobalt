@@ -6,7 +6,6 @@
 
 #include <glib.h>
 
-typedef struct SemVer SemVer;
 typedef struct CobaltHost CobaltHost;
 
 CobaltHost *cobalt_host_new();
