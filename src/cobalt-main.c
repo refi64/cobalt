@@ -34,7 +34,7 @@ static char *DEFAULT_DISABLED_FEATURES[] = {
 static char *infer_application_name(CobaltHost *host, GError **error) {
   const char *app_id = cobalt_host_get_app_id(host, error);
   if (app_id == NULL) {
-    g_prefix_error(error, "Failed to find app ID");
+    g_prefix_error(error, "Failed to find app ID: ");
     return NULL;
   }
 
