@@ -350,6 +350,8 @@ int main(int argc, char **argv) {
     if (!cobalt_host_get_expose_pids_available(host, &expose_pids_available, &error)) {
       g_warning("Failed to get expose-pids state: %s", error->message);
       // Just keep going, it's better than failing hard here.
+      g_error_free(error);
+      error = NULL;
     } else if (!expose_pids_available) {
       if (is_gtk_available) {
         show_expose_pids_alert(config);
