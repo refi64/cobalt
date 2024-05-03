@@ -338,7 +338,12 @@ int main(int argc, char **argv) {
     return 1;
   }
 
-  g_autoptr(CobaltHost) host = cobalt_host_new();
+  g_autoptr(CobaltHost) host = cobalt_host_new(&error);
+  if (host == NULL) {
+    g_printerr("Failed to initialize (is the Flatpak D-Bus portal working?): %s\n",
+               error->message);
+    return 1;
+  }
 
   if (!fill_defaults(config, host, &error)) {
     g_printerr("Failed to fill defaults: %s\n", error->message);
@@ -347,10 +352,9 @@ int main(int argc, char **argv) {
 
   if (config->application.expose_pids != COBALT_CONFIG_EXPOSE_PIDS_OPTIONAL) {
     gboolean expose_pids_available = FALSE;
-    if (!cobalt_host_get_expose_pids_available(host, &expose_pids_available, &error)) {
-      g_warning("Failed to get expose-pids state: %s", error->message);
-      // Just keep going, it's better than failing hard here.
-    } else if (!expose_pids_available) {
+    cobalt_host_get_expose_pids_available(host, &expose_pids_available);
+
+    if (!expose_pids_available) {
       if (is_gtk_available) {
         show_expose_pids_alert(config);
       } else {

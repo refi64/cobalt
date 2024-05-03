@@ -48,14 +48,64 @@ typedef struct SemVer {
   guint patch;
 } SemVer;
 
+typedef struct FlatpakPortal {
+  guint32 version;
+  guint32 supports;
+} FlatpakPortal;
+
 struct CobaltHost {
   char *app_id;
   char *exec;
   SemVer *fp_version;
+  FlatpakPortal portal;
   int flags;
 };
 
-CobaltHost *cobalt_host_new() { return g_new0(CobaltHost, 1); }
+static gboolean get_uint32_property(GDBusProxy *proxy, const char *property,
+                                    guint32 *dest, GError **error) {
+  g_autoptr(GVariant) value = g_dbus_proxy_get_cached_property(proxy, property);
+  if (value == NULL) {
+    g_set_error(error, G_IO_ERROR, G_IO_ERROR_NOT_FOUND, "Failed to read '%s'", property);
+    return FALSE;
+  }
+
+  if (!g_variant_type_equal(g_variant_get_type(value), G_VARIANT_TYPE_UINT32)) {
+    g_set_error(error, G_IO_ERROR, G_IO_ERROR_INVALID_DATA, "Invalid type '%s' for '%s'",
+                g_variant_get_type_string(value), property);
+    return FALSE;
+  }
+
+  g_variant_get(value, "u", dest);
+  return TRUE;
+}
+
+CobaltHost *cobalt_host_new(GError **error) {
+  CobaltHost *host = g_new0(CobaltHost, 1);
+
+  // The portal always needs to be functioning for sandboxing to work, so don't
+  // bother making getting info from it lazy.
+  g_autoptr(GDBusProxy) proxy = g_dbus_proxy_new_for_bus_sync(
+      G_BUS_TYPE_SESSION, G_DBUS_PROXY_FLAGS_DO_NOT_CONNECT_SIGNALS, NULL,
+      FLATPAK_PORTAL_NAME, FLATPAK_PORTAL_OBJECT, FLATPAK_PORTAL_INTERFACE, NULL, error);
+  if (proxy == NULL) {
+    g_prefix_error(error, "Failed to get portal proxy: ");
+    return FALSE;
+  }
+
+  if (!get_uint32_property(proxy, FLATPAK_PORTAL_PROPERTY_VERSION, &host->portal.version,
+                           error)) {
+    return FALSE;
+  }
+
+  if (host->portal.version >= FLATPAK_PORTAL_MINIMUM_VERSION) {
+    if (!get_uint32_property(proxy, FLATPAK_PORTAL_PROPERTY_SUPPORTS,
+                             &host->portal.supports, error)) {
+      return FALSE;
+    }
+  }
+
+  return host;
+}
 
 const char *cobalt_host_get_app_id(CobaltHost *host, GError **error) {
   if (!host->app_id) {
@@ -142,6 +192,33 @@ static SemVer *cobalt_host_get_fp_version(CobaltHost *host, GError **error) {
   return host->fp_version;
 }
 
+void cobalt_host_get_expose_pids_available(CobaltHost *host, gboolean *available) {
+  if (!(host->flags & FLAG_EXPOSE_PIDS_SET)) {
+    gboolean local_available = FALSE;
+
+    if (host->portal.version >= FLATPAK_PORTAL_MINIMUM_VERSION) {
+      local_available = host->portal.supports & FLATPAK_PORTAL_SUPPORTS_EXPOSE_PIDS;
+      if (!local_available) {
+        g_debug("expose-pids is not supported by the running Flatpak portal "
+                "instance");
+      }
+    } else {
+      g_debug("Portal version too old for expose-pids (%d < %d)", host->portal.version,
+              FLATPAK_PORTAL_MINIMUM_VERSION);
+    }
+
+    host->flags |= FLAG_EXPOSE_PIDS_SET;
+    if (local_available) {
+      host->flags |= FLAG_EXPOSE_PIDS_AVAILABLE;
+      g_debug("expose-pids is available");
+    } else {
+      g_debug("expose-pids is not available");
+    }
+  }
+
+  *available = host->flags & FLAG_EXPOSE_PIDS_AVAILABLE;
+}
+
 static gboolean check_for_binary(const char *path, gboolean *available, GError **error) {
   gboolean local_available = access(path, F_OK | X_OK) != -1;
   if (!local_available && errno != ENOENT && errno != EPERM) {
@@ -195,73 +272,6 @@ gboolean cobalt_host_get_zypak_available(CobaltHost *host, gboolean *available,
   }
 
   *available = host->flags & FLAG_ZYPAK_AVAILABLE;
-  return TRUE;
-}
-
-static gboolean get_uint32_property(GDBusProxy *proxy, const char *property,
-                                    guint32 *dest, GError **error) {
-  g_autoptr(GVariant) value = g_dbus_proxy_get_cached_property(proxy, property);
-  if (value == NULL) {
-    g_set_error(error, G_IO_ERROR, G_IO_ERROR_NOT_FOUND, "Failed to read '%s'", property);
-    return FALSE;
-  }
-
-  if (!g_variant_type_equal(g_variant_get_type(value), G_VARIANT_TYPE_UINT32)) {
-    g_set_error(error, G_IO_ERROR, G_IO_ERROR_INVALID_DATA, "Invalid type '%s' for '%s'",
-                g_variant_get_type_string(value), property);
-    return FALSE;
-  }
-
-  g_variant_get(value, "u", dest);
-  return TRUE;
-}
-
-gboolean cobalt_host_get_expose_pids_available(CobaltHost *host, gboolean *available,
-                                               GError **error) {
-  if (!(host->flags & FLAG_EXPOSE_PIDS_SET)) {
-    g_autoptr(GDBusProxy) proxy = g_dbus_proxy_new_for_bus_sync(
-        G_BUS_TYPE_SESSION, G_DBUS_PROXY_FLAGS_DO_NOT_CONNECT_SIGNALS, NULL,
-        FLATPAK_PORTAL_NAME, FLATPAK_PORTAL_OBJECT, FLATPAK_PORTAL_INTERFACE, NULL,
-        error);
-    if (proxy == NULL) {
-      g_prefix_error(error, "Failed to get portal proxy: ");
-      return FALSE;
-    }
-
-    gboolean local_available = FALSE;
-
-    guint32 version = 0;
-    if (!get_uint32_property(proxy, FLATPAK_PORTAL_PROPERTY_VERSION, &version, error)) {
-      return FALSE;
-    }
-
-    if (version >= FLATPAK_PORTAL_MINIMUM_VERSION) {
-      guint32 supports = 0;
-      if (!get_uint32_property(proxy, FLATPAK_PORTAL_PROPERTY_SUPPORTS, &supports,
-                               error)) {
-        return FALSE;
-      }
-
-      local_available = supports & FLATPAK_PORTAL_SUPPORTS_EXPOSE_PIDS;
-      if (!local_available) {
-        g_debug("expose-pids is not supported by the running Flatpak portal "
-                "instance");
-      }
-    } else {
-      g_debug("Portal version too old for expose-pids (%d < %d)", version,
-              FLATPAK_PORTAL_MINIMUM_VERSION);
-    }
-
-    host->flags |= FLAG_EXPOSE_PIDS_SET;
-    if (local_available) {
-      host->flags |= FLAG_EXPOSE_PIDS_AVAILABLE;
-      g_debug("expose-pids is available");
-    } else {
-      g_debug("expose-pids is not available");
-    }
-  }
-
-  *available = host->flags & FLAG_EXPOSE_PIDS_AVAILABLE;
   return TRUE;
 }
 

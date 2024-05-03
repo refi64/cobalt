@@ -8,19 +8,19 @@
 
 typedef struct CobaltHost CobaltHost;
 
-CobaltHost *cobalt_host_new();
+CobaltHost *cobalt_host_new(GError **error);
 void cobalt_host_free(CobaltHost *host);
 
 const char *cobalt_host_get_app_id(CobaltHost *host, GError **error);
 
 const char *cobalt_host_get_app_exec(CobaltHost *host, GError **error);
 
+void cobalt_host_get_expose_pids_available(CobaltHost *host, gboolean *available);
+
 gboolean cobalt_host_get_flextop_available(CobaltHost *host, gboolean *available,
                                            GError **error);
 gboolean cobalt_host_get_zypak_available(CobaltHost *host, gboolean *available,
                                          GError **error);
-gboolean cobalt_host_get_expose_pids_available(CobaltHost *host, gboolean *available,
-                                               GError **error);
 gboolean cobalt_host_get_slash_tmp_shared_available(CobaltHost *host, gboolean *available,
                                                     GError **error);
 
