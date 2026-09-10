@@ -33,6 +33,8 @@ struct CobaltLauncher {
   gboolean use_zypak;
   char *sandbox_filename;
   char *expose_widevine_path;
+
+  gboolean use_flextop;
 };
 
 CobaltLauncher *cobalt_launcher_new(CobaltHost *host, const char *entry_point,
@@ -65,6 +67,10 @@ void cobalt_launcher_zypak_expose_widevine_path(CobaltLauncher *launcher,
 
   g_clear_pointer(&launcher->expose_widevine_path, g_free);
   launcher->expose_widevine_path = g_strdup(widevine_path);
+}
+
+void cobalt_launcher_flextop_enable(CobaltLauncher *launcher) {
+  launcher->use_flextop = TRUE;
 }
 
 void cobalt_launcher_set_feature(CobaltLauncher *launcher, const char *feature,
@@ -304,6 +310,11 @@ static gboolean launcher_update_environment(CobaltLauncher *launcher, GError **e
   }
 
   launcher_setenv("ZYPAK_SPAWN_LATEST_ON_REEXEC", "1");
+
+  if (launcher->use_flextop) {
+    g_autofree char *prefix = g_strdup_printf("%s.flextop.", app_id);
+    launcher_setenv("CHROME_WEB_APP_DESKTOP_ID_PREFIX", prefix);
+  }
 
   return TRUE;
 }

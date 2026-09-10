@@ -26,6 +26,8 @@ void cobalt_launcher_zypak_set_sandbox_filename(CobaltLauncher *launcher,
 void cobalt_launcher_zypak_expose_widevine_path(CobaltLauncher *launcher,
                                                 const char *widevine_path);
 
+void cobalt_launcher_flextop_enable(CobaltLauncher *launcher);
+
 void cobalt_launcher_set_feature(CobaltLauncher *launcher, const char *feature,
                                  CobaltLauncherFeatureStatus status);
 void cobalt_launcher_set_features(CobaltLauncher *launcher, char **features,

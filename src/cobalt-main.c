@@ -284,6 +284,10 @@ static CobaltLauncher *setup_launcher(CobaltConfig *config, CobaltHost *host) {
     }
   }
 
+  if (config->flextop.enabled) {
+    cobalt_launcher_flextop_enable(launcher);
+  }
+
   cobalt_launcher_set_features(launcher, DEFAULT_ENABLED_FEATURES,
                                COBALT_LAUNCHER_FEATURE_ENABLED);
   cobalt_launcher_set_features(launcher, DEFAULT_DISABLED_FEATURES,
